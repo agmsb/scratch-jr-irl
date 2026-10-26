@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tangible Cat — Step 1</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<h1>Program the Cat</h1>
+<p class="hint">Tap blocks to build a program, then press GO. AGAIN goes last.</p>
+
+<div id="palette" class="palette"></div>
+
+<h2>Your program</h2>
+<div id="program" class="program"></div>
+<div class="controls">
+  <button id="clearBtn">Clear</button>
+  <button id="goBtn" class="go">▶ GO</button>
+  <button id="stopBtn">Stop</button>
+</div>
+
+<div id="warnings" class="warnings"></div>
+
+<h2>Expanded steps (what the cat will actually do)</h2>
+<div id="steps" class="steps"></div>
+
+<canvas id="stage" width="960" height="540"></canvas>
+<p class="hint">Say preset: “Hi, we’re Utopia!” — change SAY_TEXT in blocks.py before a lesson.</p>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
