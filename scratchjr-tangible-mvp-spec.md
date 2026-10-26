@@ -1,6 +1,7 @@
 # Tangible ScratchJr MVP Spec — “Scan the Blocks, Run the Cat”
 
 **Status:** Draft v1, Oct 26, 2026. Spec only — no app built yet.
+**Stack decision, Oct 26, 2026:** Python backend + webpage (not JavaScript-first). Anthony is more familiar with Go/Python than JavaScript, and Python's OpenCV is the native path for ArUco. See §2.
 **Purpose:** Let kids lay physical ScratchJr-style blocks in a row, scan them with a camera, see the same blocks appear on screen, then press GO and watch a cat run them.
 **Lesson it serves:** The 20-minute “Program the Cat” lesson for Benjamin’s Utopia pre-K class at St. Thomas More (see `scratchjr-lesson-plan.md`). The official ScratchJr lesson stays the plan. This app is an optional add-on — it does **not** replace the lesson until it passes the acceptance tests in §11.
 **Name it in class:** Call the on-screen player “Cat Player” or “Tangible Cat,” not ScratchJr. It uses the same 5 lesson blocks, but it is not the official ScratchJr app.
@@ -19,16 +20,16 @@ One reliable classroom moment: kids build a physical sequence, the camera reads 
 - No plug-in to the official ScratchJr app. There is no live external API for that. A .sjr export is a possible v2, not v1.
 - No App Store release. This is a personal / classroom demo.
 
-## 2. Recommended stack: web first, iPad later
+## 2. Recommended stack: Python backend + webpage
 
-**v1: Laptop web app.**
-- Plain HTML / CSS / JavaScript, no build step if possible.
-- Camera via `getUserMedia`, one still capture to canvas.
-- Marker detection via OpenCV.js (ArUco) — use js-aruco only if OpenCV.js bundling becomes a problem.
-- Player via Canvas 2D. No game engine needed for one cat, one stage.
-- Project it to the classroom screen over HDMI, exactly as the lesson plan already assumes for a tablet.
+**v1: Python backend serving a thin webpage.**
+- Backend: Python with Flask (requirements in `requirements.txt`). All program logic lives in Python — block definitions, AGAIN expansion, validation, and later ArUco scanning.
+- Webpage: a single HTML page with CSS and a small amount of JavaScript. The JavaScript is deliberately thin: tap blocks to build a sequence, show the confirm screen, highlight the current block, and animate the cat on Canvas. It does not decide what a program means.
+- API, Step 1: `POST /api/expand` — send the tapped sequence, get back the expanded execution steps (with AGAIN applied) plus any validation warnings. The page then plays those steps.
+- API, Step 3 (scanner, not Step 1): `POST /api/scan` — send one photo, the backend runs OpenCV ArUco detection (`cv2.aruco`, DICT_4X4_50), sorts and validates, and returns blocks + warnings for the confirm screen.
+- Run it from `localhost` on the laptop so webcam permission works in Step 3, and project the laptop screen to the classroom via HDMI.
 
-Why web first: fastest iteration, no Xcode signing, no reflector mount, and the laptop screen is what gets projected. A laptop webcam on a tripod/gooseneck looking down at the table is also easier to aim than an iPad front camera.
+Why Python backend first: Anthony is more familiar with Python than JavaScript, and Python's OpenCV is the native, well-documented path for ArUco — no OpenCV.js bundling. Go was considered and set aside for v1: GoCV bindings for ArUco are heavier to set up and less ergonomic for this job.
 
 **v2 (only if v1 is a hit): iPad app.**
 - Swift + AVFoundation + OpenCV ArUco bridged via Objective-C.
@@ -148,18 +149,22 @@ If the camera path is not classroom-ready, use this fallback and do not pretend 
 ## 9. Suggested file layout
 
 ```
-tangible-cat/
-  index.html          # Screens 1–3, stage, confirm UI
-  scanner.js          # Capture + ArUco + sort + warnings (§6)
-  blocks.js           # Marker map (§3) + program semantics (§4)
-  player.js           # Cat animation + timing (§7)
+scratch-jr-irl/
+  app.py              # Flask app: serves the page, /api/expand (Step 1), /api/scan (Step 3)
+  blocks.py           # Marker map (§3) + program semantics (§4) + validation + AGAIN expansion
+  scanner.py          # Step 3 only: OpenCV ArUco detection, sorting, warnings (§6)
+  requirements.txt    # Flask, opencv-python (scanner only, Step 3)
+  templates/index.html # Screens 1–3, stage, confirm UI (thin JavaScript only)
+  static/app.js       # Tap blocks, call /api/expand, highlight + animate steps
+  static/style.css    # Big buttons, ScratchJr colours, projector-readable text
   cards/
     generate_cards.py # OpenCV: generate DICT_4X4_50 markers + card PDFs
     cards.pdf         # Print at 100%, matte cardstock
   README.md           # How to run locally, camera setup, print notes
+  scratchjr-tangible-mvp-spec.md
 ```
 
-No backend, no database, no login. Run it from `localhost` so the webcam permission works.
+No database, no login. Run it from `localhost` so the webcam permission works in Step 3.
 
 ## 10. Classroom kit checklist
 
@@ -196,9 +201,9 @@ Home tests, in classroom-like light (not just a bright desk lamp):
 
 ## 13. Build order (suggested)
 
-1. `blocks.js` + `player.js` + manual build: cat runs a tapped sequence. No camera yet.
+1. `blocks.py` + `app.py` + manual page: tap a sequence on the page, POST it to `/api/expand`, play the returned steps. No camera yet.
 2. `generate_cards.py`: print one set, test size/distance at home.
-3. `scanner.js`: one-photo scan → confirm screen → run. No live video.
+3. `scanner.py` + `/api/scan`: one-photo scan → confirm screen → run. No live video.
 4. Test plan §11, including the bug case and the AGAIN case.
 5. Projector + classroom-light test.
 6. Only then: decide whether it goes to St. Thomas More, or stays a home project for Benjamin.
