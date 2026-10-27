@@ -159,6 +159,26 @@ async function init() {
     stopRequested = true; running = false;
     catX = 80; catY = 0; catAngle = 0; bubble = ''; drawCat();
   };
+  document.getElementById('scanBtn').onclick = async () => {
+    const input = document.getElementById('photoInput');
+    if (!input.files.length) {
+      document.getElementById('scanWarnings').textContent = 'Choose a photo first.';
+      return;
+    }
+    const form = new FormData();
+    form.append('photo', input.files[0]);
+    const res = await fetch('/api/scan', {method: 'POST', body: form});
+    const data = await res.json();
+    document.getElementById('scanWarnings').textContent = (data.warnings || []).join(' ');
+    // Confirm screen: detected program replaces the tapped program,
+    // so the teacher can edit it (tap to remove / change AGAIN count)
+    // before pressing GO. Nothing runs automatically from a scan.
+    if (data.program && data.program.length) {
+      program = data.program;
+      renderProgram();
+    }
+    renderSteps((data.expanded && data.expanded.steps) || []);
+  };
   renderProgram(); drawCat();
 }
 init();
